@@ -13,6 +13,8 @@ exists =  os.path.exists('key.key')
 if not exists:
     write_key()
 
+
+
 exist = os.path.exists('mast_password.key')       #checking if mast_password.key exists
 if exist == True:
     pass
@@ -56,7 +58,7 @@ def view():
     with open('password.txt','r') as f:
         for line in f.readlines():
             data= line.rstrip("|")
-            user, passw = data.split("|")
+            user, passw = data.rsplit("|",1)
             password = fer.decrypt(passw.encode())
             password1 = password.decode()
             print(f"User: {user} \nPassword: {password1}")
@@ -85,7 +87,10 @@ while True:
      if choice == 'N':
         add()
      elif choice =='V':
-         view()
+        if os.path.exists('password.txt') == True:
+            view()
+        else:
+            print("You do not have any password saved!")
      elif choice =='Q':
         print("Quitting...")
         break
