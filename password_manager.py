@@ -1,8 +1,11 @@
 import os
 os.system('cls') or None
 from cryptography.fernet import Fernet
+import mysql.connector as con
 import os.path
 import os
+
+con=con.connect(host='localhost',user='xGhOsT0',passwd='2006',database='pass')
 
 def write_key():
     key = Fernet.generate_key()
@@ -74,8 +77,6 @@ def add():
         f.write(name + " | " + fer.encrypt(pwd.encode()).decode() + "\n")
 
 
-    
-    
 
 while True:
     master_password = input("Enter your master password: ")
