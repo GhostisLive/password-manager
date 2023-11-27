@@ -1,38 +1,41 @@
 import os
-os.system('cls') or None
 from cryptography.fernet import Fernet
 import mysql.connector as con
 import os.path
 import os
+from dotenv import load_dotenv
 
-con=con.connect(host='localhost',user='xGhOsT0',passwd='2006',database='pass')
+load_dotenv()
+
+conn = con.connect(
+   host='localhost',
+   user=os.environ["DBUSER"],
+   passwd=os.environ["DBPASS"],
+   database='pass'
+)
 
 def write_key():
     key = Fernet.generate_key()
-    with open('key.key', 'wb')as key_file:
+    with open('key.key', 'wb') as key_file:
         key_file.write(key)
 
-exists =  os.path.exists('key.key')
-if not exists:
+if not os.path.exists('key.key'):
     write_key()
 
+with conn.cursor() as cursor:
+    cursor.execute("CREATE TABLE IF NOT EXISTS pass (name VARCHAR(255) NOT NULL, pass VARCHAR(255) NOT NULL)")
 
-
-exist = os.path.exists('mast_password.key')       #checking if mast_password.key exists
-if exist == True:
-    pass
-else:
+if not os.path.exists('mast_password.key'):
     while True:
-     mast_pwd = input("Enter new password: ")
-     mast_pwd1 = input("Enter the password again: ")
-     if mast_pwd == mast_pwd1:
-      with open('mast_password.key','a') as f:
-        f.write(mast_pwd)
-        break
-         
-     else:
-       print("Your password don't match!")
-       continue
+        mast_pwd = input("Enter new password: ")
+        mast_pwd1 = input("Enter the password again: ")
+        if mast_pwd == mast_pwd1:
+            with open('mast_password.key','a') as f:
+                f.write(mast_pwd)
+                break
+        else:
+            print("Your password don't match!")
+            continue
     
     
 def master_key():
@@ -52,62 +55,58 @@ master_pwd = master_key()
 key_os = read_key() + master_pwd
 fer= Fernet(key_os)
 
-'''def write_key():
-    key = Fernet.generate_key()
-    with open('key.key', 'wb')as key_file:
-        key_file.write(key)'''
 
 def view():
-    with open('password.txt','r') as f:
-        for line in f.readlines():
-            data= line.rstrip("|")
-            user, passw = data.rsplit("|",1)
-            password = fer.decrypt(passw.encode())
-            password1 = password.decode()
-            print(f"User: {user} \nPassword: {password1}")
-
-            
-            
+    with conn.cursor() as cursor:
+       cursor.execute("SELECT * FROM pass")
+       results = cursor.fetchall()
+       if not len(results):
+          print("You do not have any passwords saved!")
+          return
+       
+       for (user, passw) in results:
+          password = fer.decrypt(passw.encode()).decode()
+          print(f"\nUser: {user}\nPassword: {password}\n")
+      
 
 def add():
     name = input("Account name: ")
     pwd = input("Password: ")
 
-    with open('password.txt','a') as f:
-        f.write(name + " | " + fer.encrypt(pwd.encode()).decode() + "\n")
+    with conn.cursor() as cursor:
+       vals = (name, fer.encrypt(pwd.encode()).decode())
+       cursor.execute("INSERT INTO pass (name, pass) VALUES (%s, %s)", vals)
+
+       conn.commit()
 
 
+def main():
+    while True:
+        master_password = input("Enter your master password: ")
+        key_user = read_key() + master_password.encode()
+        if key_os != key_user:
+            print("Your have entered wrong password! TRY AGAIN!")
+            continue
+      
+        print("Do you want to add a new password or view existing one? ")
+        choice = input("N -> new password \nV -> view password \nQ -> quit \nEnter your choice: ").upper()
 
-while True:
-    master_password = input("Enter your master password: ")
-    key_user = read_key() + master_password.encode()
-    if key_os == key_user:
-     print("Do you want to add a new password or view existing one? ")
-     choice = input("N -> new password \nV -> view password \nQ -> quit \nEnter your choice: ")
-     choice = choice.upper()
-     if choice == 'N':
-        add()
-     elif choice =='V':
-        if os.path.exists('password.txt') == True:
-            view()
+        if choice == 'N':
+            add()
+        elif choice == 'V':
+           view()
+        elif choice == 'Q':
+           print("Quitting...")
+           break
         else:
-            print("You do not have any password saved!")
-     elif choice =='Q':
-        print("Quitting...")
-        break
-     else:
-        print("Choose a valid option!")
-        continue
-    else:
-        print("Your have entered wrong password! TRY AGAIN!")     
-        continue
-    print("Do u want to continue?")
-    exit = input("Yes -> Y \nNo -> N \n")
-    exit = exit.upper()
+           print("Choose a valid option.")
+           continue
 
-    if exit == "N":
-        print("Quitting...")
-        break
-    else:
-        continue
+        print("Do u want to continue?")
+        exit = input("Yes -> Y \nNo -> N \n").upper()
 
+        if exit == "N":
+            print("Quitting...")
+            break
+
+main()

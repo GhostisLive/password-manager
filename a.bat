@@ -1,3 +1,3 @@
 @echo off 
-pip install cryptography
+pip install cryptography mysql-connector-python python-dotenv
 pause 
